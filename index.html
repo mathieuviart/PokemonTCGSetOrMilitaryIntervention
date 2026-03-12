@@ -4,37 +4,128 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pokémon or Military?</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
 :root {
-  --bg: #111110;
-  --surface: #1a1a18;
-  --card: #1f1f1d;
-  --border: #2a2a28;
-  --text: #f0ede6;
-  --muted: #666660;
-  --subtle: #333330;
-  --correct: #22c55e;
-  --wrong: #ef4444;
-  --radius: 22px;
+  --bg: #5ba8d0;
+  --surface: #4a8fc0;
+  --card: #d0eaf8;
+  --border: rgba(80,140,200,0.35);
+  --border-strong: rgba(60,120,180,0.55);
+  --text: #1a2a3a;
+  --muted: #4a6a8a;
+  --subtle: #b0d8f0;
+  --correct: #28a850;
+  --wrong: #d03030;
+  --radius: 4px;
 }
 
-html, body {
+/* Theme overrides applied via JS */
+body.theme-sunset {
+  --bg: #e87020;
+  --surface: #d06010;
+  --card: #f8e0a0;
+  --border: rgba(200,120,20,0.4);
+  --border-strong: rgba(180,100,10,0.6);
+  --text: #2a1800;
+  --muted: #7a4a10;
+  --subtle: #f0c870;
+  --correct: #28a850;
+  --wrong: #c02020;
+}
+
+body.theme-night {
+  --bg: #2a2e5e;
+  --surface: #1e2248;
+  --card: #2e3668;
+  --border: rgba(100,120,200,0.3);
+  --border-strong: rgba(120,150,220,0.45);
+  --text: #c8d8f8;
+  --muted: #6878b8;
+  --subtle: #383e70;
+  --correct: #40c068;
+  --wrong: #e04848;
+}
+
+html { height: 100%; }
+
+body {
   height: 100%;
   background: var(--bg);
-  font-family: 'Syne', sans-serif;
+  font-family: 'Geist', sans-serif;
   color: var(--text);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  position: relative;
+}
+
+/* ─── PIXEL ART BACKGROUND ─── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  /* Default = day sky, overridden by JS via body class */
+  background: linear-gradient(180deg, #78c8f0 0%, #a8e0f8 40%, #c8f0ff 70%, #90d878 100%);
+  transition: background 2s ease;
+}
+body.theme-sunset::before {
+  background: linear-gradient(180deg, #e05010 0%, #f08020 20%, #f8b840 45%, #f8d870 65%, #e8a030 100%);
+}
+body.theme-night::before {
+  background: linear-gradient(180deg, #181c3c 0%, #242858 30%, #2e3468 55%, #1e2448 100%);
+}
+
+/* Pixel canvas */
+#starfield {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  image-rendering: pixelated;
+}
+
+/* All content above background */
+.screen, header, #flash, .progress, #gameover-overlay, #reveal { position: relative; z-index: 2; }
+#gh-link { z-index: 50; }
+
+/* ── Theme toggle button ── */
+#theme-toggle {
+  position: fixed;
+  bottom: 14px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 3px;
+  gap: 2px;
+}
+.tt-btn {
+  font-size: 0.55rem;
+  font-family: 'Geist Mono', monospace;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+  background: transparent;
+  border: none;
+  border-radius: 16px;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.tt-btn:hover { color: rgba(255,255,255,0.9); }
+.tt-btn.active {
+  background: rgba(255,255,255,0.18);
+  color: #fff;
 }
 
 /* ─── SCREENS ─── */
-.screen { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
+.screen { display: none; flex-direction: column; align-items: center; justify-content: center; width: 100%; min-height: 100%; }
 .screen.active { display: flex; animation: up 0.42s cubic-bezier(.34,1.56,.64,1) both; }
 @keyframes up { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 
@@ -42,13 +133,14 @@ html, body {
 #flash {
   position: fixed; inset: 0; z-index: 999; pointer-events: none; opacity: 0;
 }
-/* FIX #4: flash uses JS-only animation, no CSS transition conflict */
 
 /* ─── PROGRESS ─── */
 .progress {
-  position: fixed; top: 0; left: 0; height: 2px;
-  background: #444; width: 0%;
+  position: fixed; top: 0; left: 0; height: 3px;
+  background: linear-gradient(90deg, #a78bfa, #f472b6);
+  width: 0%;
   transition: width 0.5s cubic-bezier(.4,0,.2,1); z-index: 100;
+  box-shadow: 0 0 8px rgba(167,139,250,0.6);
 }
 
 /* ─── HEADER ─── */
@@ -60,233 +152,421 @@ header {
 }
 
 .btn-back-menu {
-  background: transparent; border: 1px solid var(--border); color: var(--muted);
-  font-family: 'Syne', sans-serif; font-size: 0.62rem; font-weight: 700;
+  background: var(--surface); border: 1px solid rgba(150,170,255,0.18); color: var(--muted);
+  font-family: 'Geist', sans-serif; font-size: 0.62rem; font-weight: 700;
   letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;
-  padding: 7px 14px; border-radius: 8px;
-  transition: color 0.15s, border-color 0.15s;
+  padding: 7px 14px; border-radius: 3px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
   display: flex; align-items: center; gap: 5px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(100,80,200,0.08);
 }
-.btn-back-menu:hover { color: var(--text); border-color: #555; }
+.btn-back-menu:hover { color: var(--text); border-color: rgba(150,170,255,0.35); background: rgba(20,24,50,0.9); }
 
 .header-right { display: flex; align-items: center; gap: 20px; }
 
 /* lives */
 .lives { display: flex; gap: 5px; align-items: center; }
 .life { font-size: 1rem; transition: all 0.25s; }
-.life.lost { opacity: 0.15; filter: grayscale(1); transform: scale(0.8); }
+.life.lost { opacity: 0.2; filter: grayscale(1); transform: scale(0.8); }
 
-/* FIX #7: .shake is actually used now in JS for lost life feedback */
 @keyframes shake { 0%,100%{transform:translateX(0);} 20%{transform:translateX(-5px);} 40%{transform:translateX(5px);} 60%{transform:translateX(-3px);} 80%{transform:translateX(3px);} }
 .shake { animation: shake 0.32s ease; }
 
-.stats { display: flex; align-items: center; gap: 20px; }
-.stat { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-.stat-val { font-size: 1.1rem; font-weight: 800; line-height: 1; font-family: 'DM Mono', monospace; }
-.stat-lbl { font-size: 0.55rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
-.stat-sep { width: 1px; height: 26px; background: var(--border); }
+.stats {
+  display: flex; align-items: center; gap: 16px;
+  background: var(--surface);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(150,170,255,0.15);
+  border-radius: 4px;
+  padding: 8px 16px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.4);
+}
+.stat { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.stat-val { font-size: 1.1rem; font-weight: 800; line-height: 1; font-family: 'Geist Mono', monospace; }
+.stat-lbl { font-size: 0.52rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.stat-sep { width: 1px; height: 24px; background: var(--border-strong); }
+
+/* Streak flame widget */
+.streak-widget {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  position: relative;
+}
+.streak-flame {
+  font-size: 1rem; line-height: 1; display: block; min-height: 1.1em;
+}
+@keyframes flame-pulse {
+  from { transform: scale(1) rotate(-4deg); }
+  to   { transform: scale(1.25) rotate(4deg); }
+}
+.streak-widget.speed-1 .streak-flame { animation: flame-pulse 1.4s ease infinite alternate; }
+.streak-widget.speed-2 .streak-flame { animation: flame-pulse 0.9s ease infinite alternate; }
+.streak-widget.speed-3 .streak-flame { animation: flame-pulse 0.55s ease infinite alternate; }
+.streak-widget.speed-4 .streak-flame { animation: flame-pulse 0.28s ease infinite alternate; }
+.streak-val {
+  font-size: 1.1rem; font-weight: 800; line-height: 1;
+  font-family: 'Geist Mono', monospace;
+  transition: color 0.3s;
+}
+.streak-lbl { font-size: 0.52rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
 
 /* ─── MENU ─── */
-#menu { gap: 44px; }
+#menu { gap: 40px; }
 
-.menu-header { text-align: center; display: flex; flex-direction: column; gap: 8px; }
-.menu-header h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
-.menu-header p { font-size: 0.62rem; color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; }
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#menu.active .menu-header { animation: menu-in 0.45s cubic-bezier(.34,1.4,.64,1) 0.05s both; }
+#menu.active .mode-cards  { animation: menu-in 0.45s cubic-bezier(.34,1.4,.64,1) 0.18s both; }
 
-.mode-cards { display: flex; flex-direction: column; gap: 12px; width: 310px; }
+.menu-header { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+.menu-header h1 {
+  font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1;
+  background: linear-gradient(135deg, #7c3aed 0%, #db2777 50%, #ea580c 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.menu-tagline {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.6rem; color: var(--muted); letter-spacing: 0.12em; text-transform: uppercase;
+}
+.menu-tagline-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--muted); opacity: 0.5; }
+
+.mode-cards { display: flex; flex-direction: column; gap: 10px; width: 320px; }
 
 .mode-card {
-  width: 100%; padding: 22px;
-  border-radius: 18px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text);
-  font-family: 'Syne', sans-serif; cursor: pointer;
-  text-align: left; display: flex; align-items: center; gap: 18px;
-  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+  width: 100%; padding: 20px 22px;
+  border-radius: 20px; border: 1px solid var(--border-strong);
+  background: var(--card); color: var(--text);
+  font-family: 'Geist', sans-serif; cursor: pointer;
+  text-align: left; display: flex; align-items: center; gap: 16px;
+  transition: border-color 0.18s, background 0.18s, transform 0.14s, box-shadow 0.18s;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 2px 16px rgba(100,80,200,0.07), 0 1px 3px rgba(0,0,0,0.04);
+  position: relative; overflow: hidden;
 }
-.mode-card:hover { background: var(--subtle); border-color: #3a3a38; transform: translateY(-2px); }
+.mode-card:hover { background: rgba(20,24,50,0.95); transform: translateY(-2px); }
+.mode-card:hover.infinite { border-color: rgba(80,180,80,0.45); box-shadow: 0 8px 28px rgba(80,160,80,0.13); }
+.mode-card:hover.survival { border-color: rgba(220,60,60,0.4);  box-shadow: 0 8px 28px rgba(220,60,60,0.12); }
 .mode-card:active { transform: scale(0.98); }
-.mode-card.infinite:hover { border-color: #4a5e38; }
-.mode-card.survival:hover { border-color: #8b2020; }
 
 .mode-icon {
-  width: 48px; height: 48px; border-radius: 14px;
-  background: var(--card); border: 1px solid var(--border);
+  width: 50px; height: 50px; border-radius: 4px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.5rem; flex-shrink: 0;
+  font-size: 1.6rem; flex-shrink: 0;
 }
-.mode-info { display: flex; flex-direction: column; gap: 4px; }
-.mode-name { font-size: 1rem; font-weight: 700; letter-spacing: 0.01em; }
-.mode-desc { font-size: 0.6rem; color: var(--muted); letter-spacing: 0.06em; line-height: 1.5; }
+.mode-card.infinite .mode-icon {
+  background: linear-gradient(135deg, rgba(80,200,80,0.12), rgba(80,200,80,0.03));
+  border: 1px solid rgba(80,180,80,0.2);
+}
+.mode-card.survival .mode-icon {
+  background: linear-gradient(135deg, rgba(220,60,60,0.1), rgba(220,60,60,0.03));
+  border: 1px solid rgba(220,60,60,0.18);
+}
+.mode-info { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.mode-name { font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; }
+.mode-desc { font-size: 0.59rem; color: var(--muted); letter-spacing: 0.03em; line-height: 1.55; }
 
 .mode-badge {
-  margin-left: auto; flex-shrink: 0;
-  font-size: 0.52rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+  flex-shrink: 0;
+  font-size: 0.5rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
   padding: 4px 10px; border-radius: 100px;
 }
-.badge-inf  { background: rgba(74,94,56,0.3);  color: #7ab055; border: 1px solid #4a5e38; }
-.badge-surv { background: rgba(139,32,32,0.3); color: #e05555; border: 1px solid #8b2020; }
+.badge-inf  { background: rgba(80,180,80,0.12); color: #3a8c3a; border: 1px solid rgba(80,180,80,0.3); }
+.badge-surv { background: rgba(220,60,60,0.1);  color: #b03030; border: 1px solid rgba(220,60,60,0.25); }
 
 /* ─── GAME ─── */
-#game { flex-direction: column; align-items: center; gap: 0; }
+#game { flex-direction: column; align-items: center; gap: 0; padding-top: 70px; padding-bottom: 20px; }
 
 .scene {
   position: relative; width: 340px; height: 420px;
-  cursor: grab; margin-top: 60px;
+  cursor: grab;
 }
 .scene:active { cursor: grabbing; }
 
 .card-behind {
   position: absolute; inset: 0;
-  background: var(--card); border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
   transform: rotate(2.5deg) translateY(6px) scale(0.97);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
 }
 .card-behind-2 {
   position: absolute; inset: 0;
-  background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
-  transform: rotate(-1.5deg) translateY(11px) scale(0.94); opacity: 0.5;
+  background: var(--subtle);
+  border-radius: var(--radius);
+  border: 2px solid var(--border);
+  transform: rotate(-1.5deg) translateY(11px) scale(0.94);
+  opacity: 0.7;
 }
 .card {
   position: absolute; inset: 0;
-  background: var(--card); border-radius: var(--radius); border: 1px solid var(--border);
-  box-shadow: 0 8px 48px rgba(0,0,0,0.45);
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 2px solid var(--border-strong);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,0.3),
+    inset 0 -2px 0 rgba(0,0,0,0.2),
+    0 8px 32px rgba(0,0,0,0.35),
+    0 0 0 1px rgba(0,0,0,0.3);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   padding: 48px 40px; text-align: center;
-  user-select: none; will-change: transform; touch-action: none; z-index: 10; overflow: hidden;
+  user-select: none; touch-action: none; z-index: 10; overflow: hidden;
 }
 .card:active { cursor: grabbing; }
 
-/* unused tint div removed — camo & poke-tint cover both cases */
+/* Top shine line */
+.card::before {
+  content: ''; position: absolute;
+  top: 0; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent);
+  pointer-events: none; z-index: 4;
+}
+
+/* Pixel inner border retro */
+.card::after {
+  content: ''; position: absolute;
+  inset: 12px; border-radius: 2px;
+  border: 1px solid rgba(100,140,255,0.1);
+  pointer-events: none; z-index: 1;
+}
 
 /* camo layer — revealed on left swipe */
 .card-camo {
-  position: absolute; inset: 0; border-radius: var(--radius); pointer-events: none;
-  opacity: 0;
-  background-color: #2e3d22;
+  position: absolute; border-radius: var(--radius); pointer-events: none;
+  opacity: 0; transition: opacity 0.18s ease;
+  /* inset négatif + padding positif pour que le blur ne déborde pas hors de la carte */
+  inset: -20px; padding: 20px;
+  background-color: rgba(75,95,48,0.22);
   background-image:
-    radial-gradient(ellipse 90px 55px  at  8% 18%, #243318 0%, transparent 90%),
-    radial-gradient(ellipse 70px 90px  at 28% 72%, #1e2c14 0%, transparent 90%),
-    radial-gradient(ellipse 55px 70px  at 55% 10%, #364826 0%, transparent 90%),
-    radial-gradient(ellipse 110px 50px at 80% 42%, #243018 0%, transparent 90%),
-    radial-gradient(ellipse 65px 95px  at 48% 85%, #2d3e1e 0%, transparent 90%),
-    radial-gradient(ellipse 45px 55px  at 14% 55%, #3a5028 0%, transparent 90%),
-    radial-gradient(ellipse 80px 45px  at 68% 68%, #2a3a1c 0%, transparent 90%),
-    radial-gradient(ellipse 60px 75px  at 90% 12%, #1e2c14 0%, transparent 90%),
-    radial-gradient(ellipse 50px 60px  at 35% 38%, #405530 0%, transparent 90%),
-    radial-gradient(ellipse 75px 40px  at 72% 28%, #344424 0%, transparent 90%),
-    radial-gradient(ellipse 40px 65px  at 18% 90%, #2a3c1a 0%, transparent 90%),
-    radial-gradient(ellipse 95px 35px  at 60% 52%, #1c2a12 0%, transparent 90%);
+    radial-gradient(ellipse 120px 80px  at  8% 18%, rgba(45,65,22,0.95) 0%, transparent 55%),
+    radial-gradient(ellipse 90px 120px  at 28% 72%, rgba(35,55,18,0.9) 0%, transparent 55%),
+    radial-gradient(ellipse 100px 90px  at 60% 12%, rgba(65,85,38,0.88) 0%, transparent 55%),
+    radial-gradient(ellipse 140px 70px  at 82% 48%, rgba(40,60,20,0.92) 0%, transparent 55%),
+    radial-gradient(ellipse 80px 110px  at 48% 85%, rgba(55,78,30,0.88) 0%, transparent 55%),
+    radial-gradient(ellipse 110px 70px  at 15% 60%, rgba(70,90,42,0.85) 0%, transparent 55%),
+    radial-gradient(ellipse 90px 80px   at 72% 78%, rgba(38,56,20,0.9) 0%, transparent 55%);
+  filter: blur(6px);
 }
 
-/* pokeball tint layer — revealed on right swipe */
+/* pokeball tint — revealed on right swipe */
 .card-poke-tint {
   position: absolute; inset: 0; border-radius: var(--radius); pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(to bottom, rgba(160,15,15,0.22) 50%, rgba(220,220,220,0.08) 50%);
+  opacity: 0; transition: opacity 0.18s ease;
+  background: linear-gradient(to bottom, rgba(180,0,0,0.13) 50%, rgba(230,230,230,0.1) 50%);
+  /* Le cercle est géré en background pour éviter les ghost du ::after */
+  background-image:
+    linear-gradient(to bottom, rgba(180,0,0,0.13) 50%, rgba(230,230,230,0.1) 50%),
+    radial-gradient(circle 28px at 50% 50%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.35) 60%, transparent 61%),
+    radial-gradient(circle 34px at 50% 50%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.15) 85%, transparent 86%);
 }
 
-.card-index {
-  position: absolute; top: 22px; left: 26px;
-  font-family: 'DM Mono', monospace; font-size: 0.6rem; color: var(--muted); letter-spacing: 0.08em;
-  z-index: 2;
+/* Swipe hint arrows — left and right edges */
+.swipe-hint-left, .swipe-hint-right {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  opacity: 0; transition: opacity 0.15s; z-index: 5; pointer-events: none;
 }
+.swipe-hint-left  { left: 14px; }
+.swipe-hint-right { right: 14px; }
+.swipe-hint-left.visible  { opacity: 1; }
+.swipe-hint-right.visible { opacity: 1; }
+
+.swipe-arrow {
+  font-size: 0.55rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  writing-mode: vertical-rl;
+  padding: 6px 5px; border-radius: 3px;
+}
+.swipe-hint-left  .swipe-arrow { color: #5a7a3a; background: rgba(80,120,40,0.1); transform: rotate(180deg); }
+.swipe-hint-right .swipe-arrow { color: #aa0000; background: rgba(180,0,0,0.07); }
+
+.card-index {
+  position: absolute; top: 20px; left: 0; right: 0;
+  font-family: 'Geist Mono', monospace; font-size: 0.58rem; color: var(--muted);
+  letter-spacing: 0.1em; text-align: center; z-index: 2;
+}
+
+/* Decorative question mark watermark */
+.card-watermark {
+  position: absolute; z-index: 1;
+  font-size: 11rem; font-weight: 800; color: rgba(150,170,255,0.05);
+  line-height: 1; letter-spacing: -0.05em;
+  pointer-events: none; user-select: none;
+  bottom: -20px; right: 10px;
+}
+
 .card-name {
-  font-size: 2.1rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; color: var(--text);
+  font-size: 2rem; font-weight: 700; line-height: 1.2; letter-spacing: -0.02em; color: var(--text);
   position: relative; z-index: 2;
+  padding: 0 30px;
+}
+
+.card-sub {
+  margin-top: 10px; font-size: 0.6rem; color: var(--muted);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  font-family: 'Geist Mono', monospace; position: relative; z-index: 2;
 }
 
 .stamp {
-  position: absolute; opacity: 0; z-index: 3;
-  font-size: 0.68rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
-  padding: 6px 14px; border-radius: 8px; border: 2px solid;
+  position: absolute; opacity: 0; z-index: 6;
+  font-size: 0.65rem; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase;
+  padding: 7px 14px; border-radius: 3px; border: 2px solid;
 }
-.stamp-mil  { top: 24px; left: 24px;  color: #7a9a5a; border-color: #7a9a5a; background: rgba(80,110,50,0.15); transform: rotate(-8deg); }
-.stamp-poke { top: 24px; right: 24px; color: #e03030; border-color: #e03030; background: rgba(200,30,30,0.10); transform: rotate(8deg); }
+.stamp-mil  { top: 50px; left: 20px;  color: #3a6020; border-color: #5a8a3a; background: rgba(80,140,40,0.14); transform: rotate(-10deg); }
+.stamp-poke { top: 50px; right: 20px; color: #aa0000; border-color: #CC0000; background: rgba(180,0,0,0.07); transform: rotate(9deg); }
 
 .actions { display: flex; gap: 12px; margin-top: 28px; }
 
 .btn {
-  height: 54px; padding: 0 26px; border-radius: 14px; border: none;
-  font-family: 'Syne', sans-serif; font-size: 0.8rem; font-weight: 700;
+  height: 54px; padding: 0 26px; border-radius: 4px; border: none;
+  font-family: 'Geist', sans-serif; font-size: 0.8rem; font-weight: 700;
   letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
   transition: transform 0.12s, box-shadow 0.12s;
-  display: flex; align-items: center; gap: 9px; position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; gap: 9px; position: relative; overflow: hidden;
 }
 .btn:active { transform: scale(0.95) !important; }
 
+/* Military button — camo kaki blurry */
 .btn-mil {
-  color: #d4cfb0; box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-  background-color: #3a4a2e;
+  color: #ddd8b0;
+  background-color: #5a6245;
   background-image:
-    radial-gradient(ellipse 38px 24px at 12% 30%, #2d3a22 0%, transparent 100%),
-    radial-gradient(ellipse 28px 36px at 55% 70%, #4a5e35 0%, transparent 100%),
-    radial-gradient(ellipse 42px 20px at 80% 20%, #2a3520 0%, transparent 100%),
-    radial-gradient(ellipse 22px 30px at 30% 80%, #506040 0%, transparent 100%),
-    radial-gradient(ellipse 35px 25px at 70% 60%, #3d4f2a 0%, transparent 100%);
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6); border: 1px solid #506038;
+    radial-gradient(ellipse 70px 50px at 10% 30%, rgba(40,50,25,0.9) 0%, transparent 60%),
+    radial-gradient(ellipse 55px 70px at 40% 80%, rgba(70,85,45,0.85) 0%, transparent 60%),
+    radial-gradient(ellipse 80px 40px at 75% 20%, rgba(35,45,22,0.9) 0%, transparent 60%),
+    radial-gradient(ellipse 45px 65px at 90% 70%, rgba(80,95,55,0.8) 0%, transparent 60%),
+    radial-gradient(ellipse 60px 45px at 55% 50%, rgba(50,60,33,0.85) 0%, transparent 60%),
+    radial-gradient(ellipse 40px 55px at 20% 75%, rgba(75,90,50,0.8) 0%, transparent 60%),
+    radial-gradient(ellipse 65px 35px at 65% 90%, rgba(42,52,28,0.85) 0%, transparent 60%);
+  border: 1px solid rgba(40,52,25,0.8);
+  box-shadow: 0 4px 16px rgba(30,40,15,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+  letter-spacing: 0.12em;
+  isolation: isolate;
 }
-.btn-mil:hover { transform: translateY(-1px); box-shadow: 0 6px 26px rgba(0,0,0,0.6); }
-.btn-mil-icon {
-  width: 20px; height: 20px; flex-shrink: 0; border-radius: 50%;
-  border: 2px solid rgba(212,207,176,0.5);
-  display: flex; align-items: center; justify-content: center; font-size: 0.65rem;
+.btn-mil:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(30,40,15,0.5); }
+
+/* Pokémon button — pokeball rouge/blanche */
+.btn-poke {
+  padding: 0;
+  background: transparent;
+  border: 2px solid #1a1a1a;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  overflow: hidden;
+  min-width: 140px;
+}
+.btn-poke:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+.btn-poke-inner {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+}
+.pb-half-top {
+  flex: 1; background: #CC0000;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em;
+  text-transform: uppercase; color: rgba(255,255,255,0.95);
+  padding-bottom: 2px;
+}
+.pb-band {
+  height: 7px; background: #1a1a1a;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; flex-shrink: 0;
+}
+.pb-band::before {
+  content: '';
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #f0f0f0;
+  border: 2px solid #1a1a1a;
+  box-shadow: 0 0 0 2px #f0f0f0, 0 0 0 3.5px #1a1a1a;
+  position: absolute;
+}
+.pb-half-bot {
+  flex: 1; background: #f0f0f0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.1em;
+  text-transform: uppercase; color: #1a1a1a;
+  padding-top: 2px;
 }
 
-.btn-poke { color: #fff; box-shadow: 0 4px 20px rgba(180,20,20,0.35); padding: 0; width: 154px; overflow: hidden; border: 1px solid #c01010; }
-.btn-poke:hover { transform: translateY(-1px); box-shadow: 0 6px 26px rgba(180,20,20,0.5); }
-.pokeball-btn { width: 100%; height: 100%; display: flex; flex-direction: column; }
-.pb-top { flex: 1; background: #cc1a1a; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.9); }
-.pb-mid { height: 5px; background: #111; position: relative; display: flex; align-items: center; justify-content: center; z-index: 2; }
-.pb-mid::before { content: ''; position: absolute; left: 50%; transform: translateX(-50%); width: 14px; height: 14px; border-radius: 50%; background: #222; border: 2px solid #111; box-shadow: 0 0 0 2px #555; }
-.pb-bot { flex: 1; background: #e8e8e8; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #111; }
 
 .hint { margin-top: 16px; font-size: 0.58rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
 
 /* ─── REVEAL ─── */
 .reveal {
-  position: fixed; bottom: 26px; left: 50%;
-  transform: translateX(-50%) translateY(90px); opacity: 0;
-  z-index: 190; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 16px; padding: 14px 20px 16px;
-  min-width: 280px; max-width: 340px; text-align: center;
-  box-shadow: 0 8px 36px rgba(0,0,0,0.5);
+  position: fixed; bottom: 80px;
+  left: 0; right: 0; margin: 0 auto;
+  transform: translateY(110px); opacity: 0;
+  z-index: 190;
+  background: var(--surface);
+  border: 1px solid rgba(150,170,255,0.2);
+  border-radius: 4px;
+  padding: 16px 22px 18px;
+  width: 320px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  box-shadow: 0 12px 40px rgba(100,80,200,0.16), 0 2px 8px rgba(0,0,0,0.06);
+  backdrop-filter: blur(24px);
   transition: transform 0.38s cubic-bezier(.34,1.56,.64,1), opacity 0.38s cubic-bezier(.34,1.56,.64,1);
 }
-.reveal.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-.reveal-tag { display: inline-block; font-size: 0.52rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; padding: 4px 10px; border-radius: 100px; margin-bottom: 8px; }
-.tag-mil  { background: #3a4a2e; color: #a8c080; border: 1px solid #506038; }
-.tag-poke { background: linear-gradient(to bottom, #cc1a1a 50%, #e8e8e8 50%); border: 1px solid #555; overflow: hidden; }
-.tag-poke span { background: linear-gradient(to bottom, #fff 50%, #111 50%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-.reveal-name { display: block; font-size: 1rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
-.reveal-desc { font-size: 0.63rem; color: var(--muted); line-height: 1.55; font-family: 'DM Mono', monospace; }
+.reveal.show { transform: translateY(0); opacity: 1; }
+
+.reveal-tag {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 0.5rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 100px;
+}
+.tag-mil  { background: rgba(80,140,40,0.1); color: #4a7a2a; border: 1px solid rgba(80,140,40,0.3); }
+.tag-poke { background: rgba(200,20,20,0.08); color: #c01010; border: 1px solid rgba(200,20,20,0.25); }
+
+.reveal-name {
+  font-size: 1.05rem; font-weight: 700; color: var(--text);
+  line-height: 1.2; text-align: center;
+}
+.reveal-desc {
+  font-size: 0.6rem; color: var(--muted); line-height: 1.6;
+  font-family: 'Geist Mono', monospace; text-align: center;
+}
 
 /* ─── RESULT ─── */
-#result { gap: 26px; }
+#result { gap: 22px; padding: 80px 20px 40px; overflow-y: auto; }
 
 .result-mode-badge {
   font-size: 0.6rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
   padding: 5px 14px; border-radius: 100px;
 }
 .result-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
-.result-score { font-size: 6rem; font-weight: 800; line-height: 1; letter-spacing: -0.04em; }
+.result-score { font-size: clamp(3rem, 10vw, 5.5rem); font-weight: 800; line-height: 1; letter-spacing: -0.04em; }
 .result-sub { font-size: 0.78rem; color: var(--muted); max-width: 260px; line-height: 1.6; text-align: center; }
 
 .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 300px; }
-.rg-tile { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
-.rg-val { font-size: 2rem; font-weight: 800; font-family: 'DM Mono', monospace; line-height: 1; }
+.rg-tile {
+  background: var(--surface);
+  border: 1px solid rgba(150,170,255,0.15);
+  border-radius: 4px; padding: 16px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 10px rgba(100,80,200,0.06);
+}
+.rg-val { font-size: 2rem; font-weight: 800; font-family: 'Geist Mono', monospace; line-height: 1; }
 .rg-lbl { font-size: 0.53rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 
 .result-btns { display: flex; gap: 10px; }
 .btn-replay {
-  height: 50px; padding: 0 28px; border-radius: 14px; border: 1px solid var(--border);
-  background: var(--surface); color: var(--text); font-family: 'Syne', sans-serif;
+  height: 50px; padding: 0 28px; border-radius: 4px;
+  border: 1px solid rgba(150,170,255,0.2);
+  background: var(--surface);
+  backdrop-filter: blur(10px);
+  color: var(--text); font-family: 'Geist', sans-serif;
   font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-  cursor: pointer; transition: transform 0.12s, background 0.15s;
+  cursor: pointer; transition: transform 0.12s, background 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 10px rgba(100,80,200,0.08);
 }
-.btn-replay:hover { background: var(--subtle); transform: translateY(-1px); }
+.btn-replay:hover { background: rgba(20,24,50,0.95); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(80,100,255,0.2); }
 .btn-replay:active { transform: scale(0.96); }
 .btn-menu {
-  height: 50px; padding: 0 28px; border-radius: 14px; border: 1px solid var(--border);
-  background: transparent; color: var(--muted); font-family: 'Syne', sans-serif;
+  height: 50px; padding: 0 28px; border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--muted); font-family: 'Geist', sans-serif;
   font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
   cursor: pointer; transition: transform 0.12s, color 0.15s;
 }
@@ -295,18 +575,21 @@ header {
 /* ─── GAME OVER OVERLAY ─── */
 #gameover-overlay {
   position: fixed; inset: 0; z-index: 500;
-  background: rgba(0,0,0,0.85);
+  background: rgba(0,0,0,0.7);
   display: none; align-items: center; justify-content: center; flex-direction: column; gap: 10px;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(10px);
 }
 #gameover-overlay.show { display: flex; animation: gofade 0.3s ease both; }
 @keyframes gofade { from { opacity:0; } to { opacity:1; } }
 .go-icon  { font-size: 3rem; }
-.go-title { font-size: 2.2rem; font-weight: 800; color: var(--wrong); letter-spacing: -0.02em; }
+.go-title { font-size: 2.2rem; font-weight: 800; color: #cc2020; letter-spacing: -0.02em; }
 .go-sub   { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
 </style>
 </head>
 <body>
+
+<!-- Starfield -->
+<canvas id="starfield"></canvas>
 
 <div id="flash"></div>
 <div class="progress" id="progress"></div>
@@ -326,9 +609,10 @@ header {
         <span class="stat-lbl">Wrong</span>
       </div>
       <div class="stat-sep"></div>
-      <div class="stat">
-        <span class="stat-val" id="s-streak">0</span>
-        <span class="stat-lbl">Streak</span>
+      <div class="streak-widget" id="streak-widget">
+        <span class="streak-flame" id="streak-flame"></span>
+        <span class="streak-val" id="s-streak">0</span>
+        <span class="streak-lbl">Streak</span>
       </div>
     </div>
   </div>
@@ -338,7 +622,11 @@ header {
 <div class="screen active" id="menu">
   <div class="menu-header">
     <h1>Pokémon or Military?</h1>
-    <p>96 names — can you tell them apart?</p>
+    <div class="menu-tagline">
+      <span>96 names</span>
+      <span class="menu-tagline-dot"></span>
+      <span>Can you tell them apart?</span>
+    </div>
   </div>
   <div class="mode-cards">
     <button class="mode-card infinite" onclick="startGame('infinite')">
@@ -370,19 +658,23 @@ header {
       <div class="card-poke-tint" id="poke-tint"></div>
       <div class="stamp stamp-mil"  id="stamp-mil">Military Op</div>
       <div class="stamp stamp-poke" id="stamp-poke">Pokémon TCG</div>
+      <div class="swipe-hint-left"  id="hint-left"><span class="swipe-arrow">← Military</span></div>
+      <div class="swipe-hint-right" id="hint-right"><span class="swipe-arrow">Pokémon →</span></div>
+      <div class="card-watermark">?</div>
       <div class="card-index" id="card-index">01 / 96</div>
       <div class="card-name"  id="card-name">—</div>
+      <div class="card-sub">What is this?</div>
     </div>
   </div>
   <div class="actions">
     <button class="btn btn-mil" onclick="guess('Military')">
-      <div class="btn-mil-icon">✛</div>Military
+      Military
     </button>
     <button class="btn btn-poke" onclick="guess('Pokemon')">
-      <div class="pokeball-btn">
-        <div class="pb-top">Pokémon</div>
-        <div class="pb-mid"></div>
-        <div class="pb-bot">TCG</div>
+      <div class="btn-poke-inner">
+        <div class="pb-half-top">Pokémon</div>
+        <div class="pb-band"></div>
+        <div class="pb-half-bot">TCG</div>
       </div>
     </button>
   </div>
@@ -422,8 +714,15 @@ header {
 </div>
 
 <!-- GitHub -->
-<a href="https://github.com/mathieuviart/PokemonTCGSetOrMilitaryIntervention" target="_blank" rel="noopener"
-   style="position:fixed;bottom:20px;right:24px;display:flex;align-items:center;gap:7px;color:#444;text-decoration:none;font-family:'DM Mono',monospace;font-size:0.58rem;letter-spacing:0.08em;opacity:0.5;transition:opacity 0.2s;z-index:50;"
+<div id="theme-toggle">
+  <button class="tt-btn" data-theme="day">☀</button>
+  <button class="tt-btn" data-theme="sunset">🌅</button>
+  <button class="tt-btn" data-theme="night">🌙</button>
+  <button class="tt-btn active" data-theme="auto">Auto</button>
+</div>
+
+<a id="gh-link" href="https://github.com/mathieuviart/PokemonTCGSetOrMilitaryIntervention" target="_blank" rel="noopener"
+   style="position:fixed;bottom:20px;right:24px;display:flex;align-items:center;gap:7px;color:#aaa;text-decoration:none;font-family:'Geist Mono',monospace;font-size:0.58rem;letter-spacing:0.08em;opacity:0.5;transition:opacity 0.2s;z-index:50;"
    onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.5'">
   <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
     <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
@@ -435,17 +734,17 @@ header {
 const DATA=[{N:"Rolling Thunder",T:"Military",D:"U.S. bombing campaign in North Vietnam (1965–68)"},{N:"Urgent Fury",T:"Military",D:"U.S.-led invasion of Grenada (1983)"},{N:"Infinite Reach",T:"Military",D:"U.S. missile strikes on al-Qaeda sites (1998)"},{N:"Epic Fury",T:"Military",D:"U.S.-led strikes on Iranian military targets (2026)"},{N:"Crimson Tide",T:"Military",D:"Single-day U.S. SEAL raid in Vietnam (1967)"},{N:"Emerald Warrior",T:"Military",D:"Annual U.S. Special Forces exercise (since 2014)"},{N:"Ocean Shield",T:"Military",D:"NATO anti-piracy operation off Somalia (2009–2016)"},{N:"Thunder Bolt",T:"Military",D:"Israeli raid to rescue hostages in Uganda (1976)"},{N:"Artic Edge",T:"Military",D:"Joint U.S.-Canada Arctic defense exercise (2022)"},{N:"Phantom Phoenix",T:"Military",D:"U.S.-led surge in Iraq (2008)"},{N:"Solar Sunrise",T:"Military",D:"U.S. counter-intelligence op targeting Pentagon hackers"},{N:"Celestial Balance",T:"Military",D:"JSOC raid killing Al-Shabaab leader in Somalia (2009)"},{N:"Iron Swords",T:"Military",D:"Israeli operation in Gaza against Hamas (2023–24)"},{N:"Pillar of Defense",T:"Military",D:"Israeli campaign in Gaza targeting Hamas (2012)"},{N:"Talisman Sabre",T:"Military",D:"Biennial U.S.-Australia joint exercise (since 2005)"},{N:"Sky Shield",T:"Military",D:"NORAD air-defense exercises simulating Soviet attacks (1960–62)"},{N:"Unified Protector",T:"Military",D:"NATO air campaign in Libya (2011)"},{N:"Frostbite",T:"Military",D:"U.S. Arctic naval/air exercise (1946)"},{N:"Desert Storm",T:"Military",D:"U.S.-led Gulf War — liberation of Kuwait (1991)"},{N:"Phantom Fury",T:"Military",D:"Second Battle of Fallujah (2004)"},{N:"Tidal Wave",T:"Military",D:"WWII U.S. air raid on Ploiești oil refineries (1943)"},{N:"Fireball",T:"Military",D:"Nigerian offensive against Boko Haram (2020)"},{N:"Infinite Justice",T:"Military",D:"U.S.-led invasion of Afghanistan (2001)"},{N:"Stellar Wind",T:"Military",D:"U.S. warrantless domestic surveillance program (2001–2011)"},{N:"Dark Night",T:"Military",D:"U.S. special forces training exercise (2011)"},{N:"Sea Dragon",T:"Military",D:"U.S. Navy interdiction off North Vietnam (1966–68)"},{N:"Neptune Spear",T:"Military",D:"U.S. SEAL raid killing Osama bin Laden in Pakistan (2011)"},{N:"Silver Wake",T:"Military",D:"U.S. Marine evacuation of ~900 people in Albania (1997)"},{N:"Ruby",T:"Military",D:"U.S. Army op securing a village in Afghanistan (2011)"},{N:"Totalize",T:"Military",D:"Allied offensive south of Caen in Normandy (1944)"},{N:"Shining Hope",T:"Military",D:"U.S. humanitarian mission in Kosovo (1999)"},{N:"Desert Strike",T:"Military",D:"U.S. retaliatory strikes on Iraqi air defenses (1996)"},{N:"Scorched Earth",T:"Military",D:"Yemeni/Saudi offensive against Houthis (2009–2010)"},{N:"Demon Digger",T:"Military",D:"U.S.-Iraqi raid finding weapons caches in Baghdad (2005)"},{N:"Odyssey Dawn",T:"Military",D:"U.S.-led Libyan no-fly zone intervention (2011)"},{N:"Snowbound",T:"Military",D:"U.S. Army disaster relief after Midwest blizzards (1949)"},{N:"Blizzard",T:"Military",D:"U.S. artillery operation in Kunar, Afghanistan (2004)"},{N:"Red Dawn",T:"Military",D:"Delta Force op capturing Saddam Hussein (2003)"},{N:"Restore Hope",T:"Military",D:"U.S./UN mission securing famine aid in Somalia (1992–93)"},{N:"Allied Force",T:"Military",D:"NATO air campaign in Kosovo (1999)"},{N:"Inherent Resolve",T:"Military",D:"Ongoing coalition campaign against ISIS (2014–present)"},{N:"Swift Retort",T:"Military",D:"Pakistani air strikes in response to Indian attack (2019)"},{N:"Juniper Shield",T:"Military",D:"U.S.-led counter-terrorism program in the Sahel (since 2013)"},{N:"Rough Rider",T:"Military",D:"U.S./UK air campaign against Houthi rebels (2025)"},{N:"Midnight Hammer",T:"Military",D:"U.S. B-2 airstrikes on Iranian nuclear sites (2025)"},{N:"Hawkeye Strike",T:"Military",D:"U.S.-Jordanian strikes against ISIS in Syria (2025)"},{N:"Wrath of God",T:"Military",D:"Mossad covert op targeting Munich Olympic attackers (1972–73)"},{N:"Frequent Wind",T:"Military",D:"Final helicopter evacuation of Saigon (1975)"},{N:"Flea Flicker",T:"Military",D:"U.S.-Iraqi sweep in Baghdad before referendum (2005)"},{N:"Skyridge",T:"Pokemon",D:"Pokémon TCG expansion set · May 2003"},{N:"Sandstorm",T:"Pokemon",D:"Pokémon TCG expansion set · September 2003"},{N:"Unseen Forces",T:"Pokemon",D:"Pokémon TCG expansion set · August 2005"},{N:"Crystal Guardians",T:"Pokemon",D:"Pokémon TCG expansion set · August 2006"},{N:"Power Keepers",T:"Pokemon",D:"Pokémon TCG expansion set · February 2007"},{N:"Stormfront",T:"Pokemon",D:"Pokémon TCG expansion set · November 2008"},{N:"Rising Rivals",T:"Pokemon",D:"Pokémon TCG expansion set · May 2009"},{N:"Supreme Victors",T:"Pokemon",D:"Pokémon TCG expansion set · August 2009"},{N:"Boundaries Crossed",T:"Pokemon",D:"Pokémon TCG expansion set · November 2012"},{N:"Plasma Storm",T:"Pokemon",D:"Pokémon TCG expansion set · February 2013"},{N:"Emerging Powers",T:"Pokemon",D:"Pokémon TCG expansion set · August 2011"},{N:"Noble Victories",T:"Pokemon",D:"Pokémon TCG expansion set · November 2011"},{N:"Roaring Skies",T:"Pokemon",D:"Pokémon TCG expansion set · May 2015"},{N:"Fates Collide",T:"Pokemon",D:"Pokémon TCG expansion set · May 2016"},{N:"Celestial Storm",T:"Pokemon",D:"Pokémon TCG expansion set · August 2018"},{N:"Unbroken Bonds",T:"Pokemon",D:"Pokémon TCG expansion set · May 2019"},{N:"Silver Tempest",T:"Pokemon",D:"Pokémon TCG expansion set · November 2022"},{N:"Lost Thunder",T:"Pokemon",D:"Pokémon TCG expansion set · November 2018"},{N:"Crimson Invasion",T:"Pokemon",D:"Pokémon TCG expansion set · November 2017"},{N:"Surging Sparks",T:"Pokemon",D:"Pokémon TCG expansion set · November 2024"},{N:"Aquapolis",T:"Pokemon",D:"Pokémon TCG expansion set · January 2003"},{N:"Dragon Frontiers",T:"Pokemon",D:"Pokémon TCG expansion set · November 2006"},{N:"Great Encounter",T:"Pokemon",D:"Pokémon TCG expansion set · February 2008"},{N:"Dragon Exalted",T:"Pokemon",D:"Pokémon TCG expansion set · August 2012"},{N:"Plasma Blast",T:"Pokemon",D:"Pokémon TCG expansion set · August 2013"},{N:"XY",T:"Pokemon",D:"Pokémon TCG expansion set · February 2014"},{N:"Breakpoint",T:"Pokemon",D:"Pokémon TCG expansion set · February 2016"},{N:"Steam Siege",T:"Pokemon",D:"Pokémon TCG expansion set · August 2016"},{N:"Unified Minds",T:"Pokemon",D:"Pokémon TCG expansion set · August 2019"},{N:"Cosmic Eclipse",T:"Pokemon",D:"Pokémon TCG expansion set · November 2019"},{N:"Brilliant Stars",T:"Pokemon",D:"Pokémon TCG expansion set · February 2022"},{N:"Astral Radiance",T:"Pokemon",D:"Pokémon TCG expansion set · May 2022"},{N:"Journey Together",T:"Pokemon",D:"Pokémon TCG expansion set · March 2025"},{N:"Black Bolt",T:"Pokemon",D:"Pokémon TCG expansion set · July 2025"},{N:"White Flare",T:"Pokemon",D:"Pokémon TCG expansion set · July 2025"},{N:"Ascended Heroes",T:"Pokemon",D:"Pokémon TCG expansion set · January 2026"},{N:"Perfect Order",T:"Pokemon",D:"Pokémon TCG expansion set · March 2026"},{N:"Darkness Ablaze",T:"Pokemon",D:"Pokémon TCG expansion set · August 2020"},{N:"Rebel Clash",T:"Pokemon",D:"Pokémon TCG expansion set · May 2020"},{N:"Forbidden Light",T:"Pokemon",D:"Pokémon TCG expansion set · May 2018"},{N:"Flashfire",T:"Pokemon",D:"Pokémon TCG expansion set · May 2014"},{N:"Call of Legends",T:"Pokemon",D:"Pokémon TCG expansion set · February 2011"},{N:"Majestic Dawn",T:"Pokemon",D:"Pokémon TCG expansion set · May 2008"},{N:"Delta Species",T:"Pokemon",D:"Pokémon TCG expansion set · October 2005"},{N:"Sword and Shield",T:"Pokemon",D:"Pokémon TCG expansion set · February 2020"},{N:"Neo Discovery",T:"Pokemon",D:"Pokémon TCG expansion set · June 2001"},{N:"Holon Phantom",T:"Pokemon",D:"Pokémon TCG expansion set · May 2006"},{N:"Legends Awakened",T:"Pokemon",D:"Pokémon TCG expansion set · August 2008"},{N:"Crown Zenith",T:"Pokemon",D:"Pokémon TCG expansion set · January 2023"}];
 
 const GRADES_INF=[
-  {min:90,t:"Classified-level knowledge. You know your ops and your sets.",c:"#22c55e"},
-  {min:75,t:"Sharp. You clearly collect cards and follow world events.",c:"#22c55e"},
-  {min:60,t:"Decent. A few misses, but mostly on target.",c:"#f59e0b"},
-  {min:45,t:"50/50. Might be guessing more than thinking.",c:"#f59e0b"},
-  {min:0, t:"You couldn't tell a Charizard from a B-2 bomber. Try again.",c:"#ef4444"}
+  {min:90,t:"Classified-level knowledge. You know your ops and your sets.",c:"#16a34a"},
+  {min:75,t:"Sharp. You clearly collect cards and follow world events.",c:"#16a34a"},
+  {min:60,t:"Decent. A few misses, but mostly on target.",c:"#d97706"},
+  {min:45,t:"50/50. Might be guessing more than thinking.",c:"#d97706"},
+  {min:0, t:"You couldn't tell a Charizard from a B-2 bomber. Try again.",c:"#dc2626"}
 ];
 const GRADES_SURV=[
-  {min:80,t:"Flawless. You survived with barely a scratch.",c:"#22c55e"},
-  {min:50,t:"Solid run. Kept your cool under pressure.",c:"#22c55e"},
-  {min:25,t:"Decent effort before the lives ran out.",c:"#f59e0b"},
-  {min:0, t:"Eliminated early. The cards got the better of you.",c:"#ef4444"}
+  {min:80,t:"Flawless. You survived with barely a scratch.",c:"#16a34a"},
+  {min:50,t:"Solid run. Kept your cool under pressure.",c:"#16a34a"},
+  {min:25,t:"Decent effort before the lives ran out.",c:"#d97706"},
+  {min:0, t:"Eliminated early. The cards got the better of you.",c:"#dc2626"}
 ];
 
 const MAX_LIVES = 3;
@@ -453,7 +752,6 @@ const $=id=>document.getElementById(id);
 
 let deck=[], idx=0, correct=0, wrong=0, streak=0, milH=0, pokeH=0;
 let lives=MAX_LIVES, mode='infinite';
-// FIX #1/#3: single authoritative state flag + pending timeout tracker
 let busy=false, gameActive=false;
 let drag=false, sx=0, cx=0;
 let flyTimer=null, revealTimer=null, flashTimer=null, goTimer=null;
@@ -472,7 +770,6 @@ function show(id){
   $(id).classList.add('active');
 }
 
-// FIX #1 & #3: goMenu cancels all pending timers and resets all state
 function goMenu(){
   gameActive=false;
   busy=false;
@@ -481,11 +778,8 @@ function goMenu(){
   clearTimeout(revealTimer);
   clearTimeout(flashTimer);
   clearTimeout(goTimer);
-  // hide reveal immediately
   $('reveal').classList.remove('show');
-  // hide gameover overlay if visible
   $('gameover-overlay').classList.remove('show');
-  // reset flash
   $('flash').style.opacity='0';
   $('header').style.display='none';
   $('progress').style.width='0%';
@@ -519,41 +813,49 @@ function renderLives(){
 }
 
 function resetCardVisuals(){
-  $('camo').style.opacity='0';
-  $('poke-tint').style.opacity='0';
-  $('stamp-mil').style.opacity='0';
-  $('stamp-poke').style.opacity='0';
+  const camo=$('camo'), tint=$('poke-tint');
+  const smil=$('stamp-mil'), spoke=$('stamp-poke');
+  // Tout couper instantanément — aucune transition pendant le reset
+  [camo,tint,smil,spoke].forEach(el=>{
+    el.style.transition='none';
+    el.style.opacity='0';
+  });
+  const hl=$('hint-left'), hr=$('hint-right');
+  if(hl) hl.classList.remove('visible');
+  if(hr) hr.classList.remove('visible');
 }
 
 function tick(){
-  // FIX #5: guard — don't run if we've navigated away
   if(!gameActive) return;
-
   if(idx>=deck.length){ endGame('finished'); return; }
-
   const card=$('card');
-  // reset transform without triggering transition artifacts
+  // 1. Reset position sans transition, carte encore invisible
   card.style.transition='none';
   card.style.transform='';
-  card.style.opacity='1';
+  card.style.opacity='0';
+  // 2. Reset tous les overlays sans transition (coupe tout flash)
   resetCardVisuals();
-
+  // 3. Mettre à jour le contenu
   $('card-name').textContent=deck[idx].N;
   $('card-index').textContent=String(idx+1).padStart(2,'0')+' / '+deck.length;
   $('progress').style.width=((idx/deck.length)*100)+'%';
   $('hint').textContent=(deck.length-idx)+' cards remaining · ← → arrow keys';
   updateStats();
-  busy=false;
+  // 4. Seulement après 2 frames (overlays propres), rendre la carte visible
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    if(!gameActive) return;
+    card.style.transition='opacity 0.18s ease';
+    card.style.opacity='1';
+    busy=false;
+  }));
 }
 
 function guess(type){
-  // FIX #6: keyboard guard handled in listener; button guard here
+  drag=false; cx=0;
   if(busy || !gameActive || idx>=deck.length) return;
   busy=true;
-
   const item=deck[idx];
   const ok=item.T===type;
-
   if(ok){
     correct++; streak++;
     if(type==='Pokemon') pokeH++; else milH++;
@@ -561,14 +863,12 @@ function guess(type){
     wrong++; streak=0;
     if(mode==='survival'){
       lives--;
-      // FIX #7: actually apply shake animation
       shakeLife();
       renderLives();
       if(lives<=0){
         updateStats();
         flashScreen(false);
         showReveal(item);
-        // FIX #2: fly doesn't increment idx — triggerGameOver does it once
         fly(type==='Military'?-1:1, ()=>{
           if(!gameActive) return;
           triggerGameOver();
@@ -577,12 +877,11 @@ function guess(type){
       }
     }
   }
-
   updateStats();
   flashScreen(ok);
   showReveal(item);
   fly(type==='Military'?-1:1, ()=>{
-    if(!gameActive) return; // FIX #5
+    if(!gameActive) return;
     idx++;
     tick();
   });
@@ -598,24 +897,22 @@ function fly(dir, cb){
 }
 
 function triggerGameOver(){
-  // FIX #2: increment idx exactly once here
   idx++;
   const overlay=$('gameover-overlay');
   overlay.classList.add('show');
   clearTimeout(goTimer);
   goTimer=setTimeout(()=>{
-    if(!gameActive) return; // FIX #5
+    if(!gameActive) return;
     overlay.classList.remove('show');
     endGame('gameover');
   }, 1800);
 }
 
-// FIX #4: flash uses requestAnimationFrame to avoid class race conditions
 function flashScreen(ok){
   const f=$('flash');
   clearTimeout(flashTimer);
   f.style.transition='none';
-  f.style.background=ok?'rgba(34,197,94,0.2)':'rgba(239,68,68,0.2)';
+  f.style.background=ok?'rgba(22,163,74,0.15)':'rgba(220,38,38,0.15)';
   f.style.opacity='1';
   flashTimer=setTimeout(()=>{
     f.style.transition='opacity 0.5s ease';
@@ -633,7 +930,7 @@ function showReveal(item){
     tag.innerHTML='Military Operation';
   } else {
     tag.className='reveal-tag tag-poke';
-    tag.innerHTML='<span>Pokémon TCG Set</span>';
+    tag.textContent='Pokémon TCG Set';
   }
   $('rev-name').textContent=item.N;
   $('rev-desc').textContent=item.D;
@@ -641,11 +938,9 @@ function showReveal(item){
   revealTimer=setTimeout(()=>r.classList.remove('show'), 2700);
 }
 
-// FIX #7: shake is now actually used
 function shakeLife(){
   const livesEl=$('lives');
   livesEl.classList.remove('shake');
-  // force reflow to restart animation
   void livesEl.offsetWidth;
   livesEl.classList.add('shake');
   setTimeout(()=>livesEl.classList.remove('shake'), 350);
@@ -655,34 +950,54 @@ function updateStats(){
   $('s-correct').textContent=correct;
   $('s-wrong').textContent=wrong;
   $('s-streak').textContent=streak;
+  const widget=$('streak-widget');
+  const flame=$('streak-flame');
+  const val=$('s-streak');
+  // Remove all speed classes
+  widget.classList.remove('speed-1','speed-2','speed-3','speed-4');
+  if(streak===0){
+    flame.textContent='';
+    val.style.color='var(--muted)';
+  } else if(streak<=2){
+    flame.textContent='🔥';
+    widget.classList.add('speed-1');
+    val.style.color='var(--text)';
+  } else if(streak<=4){
+    flame.textContent='🔥';
+    widget.classList.add('speed-2');
+    val.style.color='#f59e0b';
+  } else if(streak<=7){
+    flame.textContent='🔥';
+    widget.classList.add('speed-3');
+    val.style.color='#ea580c';
+  } else {
+    flame.textContent='🔥';
+    widget.classList.add('speed-4');
+    val.style.color='#dc2626';
+  }
 }
 
 function endGame(reason){
   gameActive=false;
   $('header').style.display='none';
   show('result');
-
   const grades = mode==='survival' ? GRADES_SURV : GRADES_INF;
-  // FIX #2 consequence: idx is now always the count of cards seen
   const total = mode==='survival' ? idx : deck.length;
   const pct   = total>0 ? Math.round((correct/total)*100) : 0;
   const g = grades.find(x=>pct>=x.min);
-
   const badge=$('r-mode-badge');
   if(mode==='infinite'){
     badge.textContent='∞ Infinite Mode';
-    badge.style.cssText='background:rgba(74,94,56,0.3);color:#7ab055;border:1px solid #4a5e38;';
+    badge.style.cssText='background:rgba(80,180,80,0.1);color:#3a8c3a;border:1px solid rgba(80,180,80,0.3);';
   } else {
     badge.textContent='❤️ Survival Mode';
-    badge.style.cssText='background:rgba(139,32,32,0.3);color:#e05555;border:1px solid #8b2020;';
+    badge.style.cssText='background:rgba(220,60,60,0.1);color:#b03030;border:1px solid rgba(220,60,60,0.25);';
   }
-
   $('r-score').textContent = mode==='survival' ? correct+' pts' : correct+'/'+total;
   $('r-score').style.color  = g.c;
   $('r-sub').textContent    = reason==='gameover'
     ? 'Out after '+idx+' cards. '+g.t
     : g.t;
-
   $('r-correct').textContent=correct;
   $('r-wrong').textContent=wrong;
   $('r-mil').textContent=milH;
@@ -690,39 +1005,52 @@ function endGame(reason){
   $('progress').style.width='100%';
 }
 
-// FIX #6: keyboard only fires when game screen is active
 document.addEventListener('keydown', e=>{
   if(!gameActive) return;
   if(e.key==='ArrowLeft')  guess('Military');
   if(e.key==='ArrowRight') guess('Pokemon');
 });
 
-// ─── DRAG ───
 const cardEl=$('card');
+
+let hasMoved = false;
 
 function onDragStart(e){
   if(busy||!gameActive) return;
   drag=true;
+  hasMoved=false;
   sx=e.touches?e.touches[0].clientX:e.clientX;
+  cx=0;
   cardEl.style.transition='none';
 }
 
 function onDragMove(e){
-  if(!drag) return;
-  cx=(e.touches?e.touches[0].clientX:e.clientX)-sx;
+  if(!drag||busy) return;
+  const newCx=(e.touches?e.touches[0].clientX:e.clientX)-sx;
+  // Ignorer les micro-mouvements < 4px (bruit du clic)
+  if(!hasMoved && Math.abs(newCx)<4) return;
+  hasMoved=true;
+  cx=newCx;
   cardEl.style.transform=`translateX(${cx}px) rotate(${cx*0.055}deg)`;
-  const threshold=60, absX=Math.abs(cx);
-  const ratio=Math.max(0, Math.min(1, (absX-threshold)/80));
+  const threshold=40, absX=Math.abs(cx);
+  const ratio=Math.max(0, Math.min(1, (absX-threshold)/90));
+  // S'assurer que les transitions sont désactivées pendant le drag (contrôle manuel)
+  $('camo').style.transition='none';
+  $('poke-tint').style.transition='none';
   if(cx < -threshold){
     $('stamp-mil').style.opacity=ratio;
     $('stamp-poke').style.opacity='0';
     $('camo').style.opacity=ratio*0.85;
     $('poke-tint').style.opacity='0';
+    $('hint-left').classList.toggle('visible', ratio>0.2);
+    $('hint-right').classList.remove('visible');
   } else if(cx > threshold){
     $('stamp-poke').style.opacity=ratio;
     $('stamp-mil').style.opacity='0';
     $('camo').style.opacity='0';
     $('poke-tint').style.opacity=ratio*0.9;
+    $('hint-right').classList.toggle('visible', ratio>0.2);
+    $('hint-left').classList.remove('visible');
   } else {
     resetCardVisuals();
   }
@@ -731,6 +1059,9 @@ function onDragMove(e){
 function onDragEnd(){
   if(!drag) return;
   drag=false;
+  // Pas de mouvement réel ou busy → reset état proprement sans toucher aux visuels
+  if(!hasMoved || busy){ cx=0; hasMoved=false; return; }
+  hasMoved=false;
   if     (cx < -80) guess('Military');
   else if(cx >  80) guess('Pokemon');
   else {
@@ -741,12 +1072,443 @@ function onDragEnd(){
   cx=0;
 }
 
-cardEl.addEventListener('mousedown',  onDragStart);
+
+
+document.addEventListener('mousedown', e=>{
+  if(e.target.closest('#card')) onDragStart(e);
+});
 cardEl.addEventListener('touchstart', onDragStart, {passive:true});
 document.addEventListener('mousemove',  onDragMove);
 document.addEventListener('touchmove',  onDragMove, {passive:true});
 document.addEventListener('mouseup',    onDragEnd);
 document.addEventListener('touchend',   onDragEnd);
+
+// ─── PIXEL ART SCENE — day / sunset / night based on local time ───
+(function(){
+  const canvas = document.getElementById('starfield');
+  const ctx    = canvas.getContext('2d');
+  const SCALE  = 3; // 1 logical pixel = 3 screen px
+  let W, H, scene, stars=[], clouds=[], birds=[];
+
+  /* ── helpers ── */
+  function rand(a,b){ return a+Math.random()*(b-a); }
+  function ri(a,b)  { return Math.floor(rand(a,b+1)); }
+  function px(x,y,c,s=1){ ctx.fillStyle=c; ctx.fillRect(x,y,s,s); }
+
+  /* ── time detection ── */
+  let manualTheme = null; // null = auto
+
+  function getTheme(){
+    if(manualTheme) return manualTheme;
+    const h = new Date().getHours();
+    if(h>=6  && h<17) return 'day';
+    if(h>=17 && h<21) return 'sunset';
+    return 'night';
+  }
+
+  // Wire theme toggle buttons
+  document.querySelectorAll('.tt-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const t = btn.dataset.theme;
+      manualTheme = t==='auto' ? null : t;
+      document.querySelectorAll('.tt-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      lastTheme = null; // force redraw
+    });
+  });
+
+  /* ── palette per theme ── */
+  const THEMES = {
+    day:{
+      sky1:'#78c8f0', sky2:'#b8e8f8',
+      cloudFill:'#f8f8ff', cloudShadow:'#d0e8f8',
+      sunMoon:'#fffff0', sunMoonGlow:'rgba(255,255,200,0.3)',
+      starColor:null,
+      // Ground
+      gnd1:'#50c028', gnd2:'#3a9018', gnd3:'#289010',
+      gndLine:'#68d838',
+      grass1:'#68d840', grass2:'#40a820',
+      flowers:['#f84040','#f8f040','#f840f0','#40f0f8','#f89040'],
+      water: null,
+    },
+    sunset:{
+      sky1:'#e04010', sky2:'#f8b030',
+      cloudFill:'#f8d890', cloudShadow:'#e0a040',
+      sunMoon:'#fffff8', sunMoonGlow:'rgba(255,255,200,0.5)',
+      starColor:null,
+      stripes: true,
+      // Ground
+      gnd1:'#988020', gnd2:'#706010', gnd3:'#504808',
+      gndLine:'#b09828',
+      grass1:'#a89020', grass2:'#786810',
+      flowers:['#e87020','#f8c030','#e05010','#f8a020'],
+      water: null,
+    },
+    night:{
+      sky1:'#181c3c', sky2:'#2a3060',
+      cloudFill:'#3a4480', cloudShadow:'#2a3468',
+      sunMoon:'#e8f0ff', sunMoonGlow:'rgba(200,220,255,0.25)',
+      starColor:'#ffffff',
+      // Ground
+      gnd1:'#1e2e58', gnd2:'#162040', gnd3:'#101830',
+      gndLine:'#283868',
+      grass1:'#243060', grass2:'#182448',
+      flowers:['#4060c0','#6080e0','#3050a0'],
+      water:'#161e3c',
+      waterShine:'rgba(140,180,255,0.15)',
+    },
+  };
+
+  function resize(){
+    W = Math.ceil(window.innerWidth/SCALE);
+    H = Math.ceil(window.innerHeight/SCALE);
+    canvas.width=W; canvas.height=H;
+    canvas.style.width=window.innerWidth+'px';
+    canvas.style.height=window.innerHeight+'px';
+  }
+
+  function initScene(){
+    const theme = getTheme();
+    document.body.classList.remove('theme-day','theme-sunset','theme-night');
+    document.body.classList.add('theme-'+theme);
+    scene = THEMES[theme];
+
+    // Stars (night only)
+    stars=[];
+    if(scene.starColor){
+      for(let i=0;i<ri(60,90);i++){
+        stars.push({x:ri(0,W),y:ri(0,H*0.55),
+          size:Math.random()<0.1?2:1,
+          a:rand(0.4,1),spd:rand(0.3,1.2),off:rand(0,Math.PI*2)});
+      }
+    }
+
+    // Clouds — shape pre-computed at init to avoid per-frame randomness glitches
+    clouds=[];
+    const nc = ri(3,5);
+    for(let i=0;i<nc;i++){
+      const w=ri(20,38), h=ri(9,15);
+      const bumpCount = Math.floor(w/6);
+      const bumps=[];
+      for(let b=0;b<bumpCount;b++){
+        const edge = (b===0||b===bumpCount-1);
+        bumps.push(Math.floor(h*(edge ? rand(0.35,0.55) : rand(0.6,1.0))));
+      }
+      clouds.push({x:ri(0,W), y:ri(4, Math.floor(H*0.32)),
+        w, h, bumps,
+        spd:rand(0.03,0.10)});
+    }
+
+    // Birds (day/sunset only)
+    birds=[];
+    if(theme!=='night'){
+      for(let i=0;i<ri(3,6);i++){
+        birds.push({x:rand(0,W),y:rand(H*0.15,H*0.45),
+          spd:rand(0.15,0.4),flap:0,flapSpd:rand(2,4)});
+      }
+    }
+
+    // Ground details — pre-computed positions
+    const P=scene;
+    const gy=Math.floor(H*0.72);
+    // Grass tufts: {x, y, h, col}
+    scene._grass=[];
+    for(let gx=0;gx<W;gx++){
+      if(Math.random()<0.55){
+        scene._grass.push({
+          x:gx,
+          y:ri(gy-1, gy+2),
+          h:ri(2,5),
+          c:Math.random()<0.5?P.grass1:P.grass2
+        });
+      }
+    }
+    // Flowers/dots scattered on ground
+    scene._flowers=[];
+    for(let i=0;i<ri(18,30);i++){
+      scene._flowers.push({
+        x:ri(0,W),
+        y:ri(gy+2, gy+Math.floor((H-gy)*0.7)),
+        c:P.flowers[ri(0,P.flowers.length-1)]
+      });
+    }
+    // Water ripples for night
+    scene._ripples=[];
+    if(P.water){
+      const wy=gy+Math.floor((H-gy)*0.18);
+      scene._waterY=wy;
+      for(let i=0;i<ri(8,14);i++){
+        scene._ripples.push({x:ri(0,W),y:ri(wy,wy+Math.floor((H-wy)*0.6)),w:ri(4,14)});
+      }
+    }
+  }
+
+  /* ── draw helpers ── */
+
+  function drawSkyStripes(t){ // sunset only
+    // Horizontal orange stripes like in the reference
+    const stripeH = 2;
+    const count = Math.floor(H*0.6/stripeH);
+    for(let i=0;i<count;i++){
+      const y = i*stripeH;
+      const ratio = i/count;
+      // alternate lighter/darker
+      const bright = i%2===0 ? 0 : 12;
+      const r = Math.floor(200 + ratio*50 + bright);
+      const g = Math.floor(80 + ratio*120 + bright);
+      const b = bright;
+      ctx.fillStyle=`rgb(${r},${g},${b})`;
+      ctx.fillRect(0, y, W, stripeH);
+    }
+  }
+
+  function drawCloud(cloud, fill, shadow){
+    const x=Math.floor(cloud.x), y=Math.floor(cloud.y);
+    const {w, h, bumps} = cloud;
+    const bumpCount = bumps.length;
+    const bw = Math.floor(w/bumpCount);
+    // Draw base rectangle first (bottom half) — no gaps
+    ctx.fillStyle = fill;
+    ctx.fillRect(x, y + Math.floor(h*0.4), w, Math.ceil(h*0.6));
+    // Draw bumps on top
+    for(let b=0;b<bumpCount;b++){
+      const bx = x + b*bw;
+      ctx.fillStyle = fill;
+      ctx.fillRect(bx, y + (h - bumps[b]), bw+1, bumps[b]);
+    }
+    // Shadow bottom strip
+    ctx.fillStyle = shadow;
+    ctx.fillRect(x+1, y+h-2, w-2, 2);
+  }
+
+  function drawCity(theme){
+    const P = THEMES[theme];
+    const ground = Math.floor(H*0.72);
+    const buildingWidths = [5,7,5,9,6,8,5,7,6,10,5,8,7,5,9,6];
+    let bx = 0;
+    while(bx < W){
+      const bw = buildingWidths[bx % buildingWidths.length];
+      const bh = ri(12, 32);
+      const by = ground - bh;
+      ctx.fillStyle = P.city;
+      ctx.fillRect(bx, by, bw-1, bh);
+      ctx.fillStyle = P.cityDark;
+      ctx.fillRect(bx, by, 1, bh); // left shadow
+      ctx.fillRect(bx, by, bw-1, 1); // top
+      // windows
+      if(getTheme()==='night'){
+        for(let wy=by+2; wy<ground-2; wy+=4){
+          for(let wx=bx+1; wx<bx+bw-2; wx+=3){
+            if(Math.random()<0.45){
+              ctx.fillStyle=`rgba(255,240,180,${rand(0.4,0.9)})`;
+              ctx.fillRect(wx, wy, 2, 2);
+            }
+          }
+        }
+      }
+      bx += bw + ri(0,2);
+    }
+  }
+
+  function drawTree(theme){
+    const P = THEMES[theme];
+    const groundY = Math.floor(H*0.72);
+    // Trunk — left side, large tree like reference
+    const tx = Math.floor(W*0.12);
+    const th = Math.floor(H*0.45);
+    const tw = 5;
+    ctx.fillStyle = P.treeTrunk;
+    ctx.fillRect(tx, groundY-th, tw, th);
+    // Canopy — big irregular pixel blob
+    const cx = tx + tw/2;
+    const cy = groundY - th + 10;
+    const cr = Math.floor(H*0.22);
+    for(let py=cy-cr; py<=cy+cr; py++){
+      for(let px2=cx-cr; px2<=cx+cr; px2++){
+        const d = Math.sqrt((px2-cx)**2+(py-cy)**2);
+        if(d<=cr && Math.random()<0.85){
+          ctx.fillStyle = (d>cr*0.6) ? P.treeLeaf2 : P.treeLeaf;
+          ctx.fillRect(Math.floor(px2), Math.floor(py), 1, 1);
+        }
+      }
+    }
+  }
+
+  function drawGround(theme){
+    const P = THEMES[theme];
+    const gy = Math.floor(H*0.72);
+    // Horizon line
+    ctx.fillStyle = P.ground1;
+    ctx.fillRect(0, gy, W, H-gy);
+    // Darker band
+    ctx.fillStyle = P.ground2;
+    ctx.fillRect(0, gy+Math.floor((H-gy)*0.4), W, Math.floor((H-gy)*0.6));
+    // Pixel grass texture top
+    for(let gx=0; gx<W; gx+=2){
+      if(Math.random()<0.5){
+        ctx.fillStyle = P.treeLeaf || P.ground1;
+        ctx.fillRect(gx, gy-1, 1, ri(1,3));
+      }
+    }
+    // Water (night only)
+    if(P.water){
+      const wy = gy + Math.floor((H-gy)*0.2);
+      ctx.fillStyle = P.water;
+      ctx.fillRect(0, wy, W, Math.floor((H-wy)*0.5));
+      // reflections
+      for(let rx=0; rx<W; rx+=ri(4,8)){
+        ctx.fillStyle = 'rgba(160,200,255,0.12)';
+        ctx.fillRect(rx, wy+ri(1,4), ri(4,12), 1);
+      }
+    }
+  }
+
+  function drawSunMoon(theme, t){
+    const P = THEMES[theme];
+    const isNight = theme==='night';
+    const sx = isNight ? Math.floor(W*0.72) : (theme==='sunset' ? Math.floor(W*0.15) : Math.floor(W*0.75));
+    const sy = isNight ? Math.floor(H*0.12) : (theme==='sunset' ? Math.floor(H*0.55) : Math.floor(H*0.14));
+    const r  = isNight ? 7 : (theme==='sunset' ? 14 : 9);
+
+    // Glow
+    ctx.fillStyle = P.sunMoonGlow;
+    for(let gr=r+4; gr>r; gr--){
+      ctx.globalAlpha=0.08;
+      for(let py=sy-gr; py<=sy+gr; py++){
+        for(let px2=sx-gr; px2<=sx+gr; px2++){
+          if(Math.sqrt((px2-sx)**2+(py-sy)**2)<=gr)
+            ctx.fillRect(px2,py,1,1);
+        }
+      }
+    }
+    ctx.globalAlpha=1;
+
+    // Body
+    for(let py=sy-r; py<=sy+r; py++){
+      for(let px2=sx-r; px2<=sx+r; px2++){
+        if(Math.sqrt((px2-sx)**2+(py-sy)**2)<=r){
+          ctx.fillStyle=P.sunMoon;
+          ctx.fillRect(px2,py,1,1);
+        }
+      }
+    }
+    // Crescent for moon
+    if(isNight){
+      for(let py=sy-r; py<=sy+r; py++){
+        for(let px2=sx-r+2; px2<=sx+r+2; px2++){
+          if(Math.sqrt((px2-sx-2.5)**2+(py-sy)**2)<=r*0.82){
+            ctx.fillStyle=THEMES.night.sky1;
+            ctx.fillRect(px2,py,1,1);
+          }
+        }
+      }
+    }
+  }
+
+  function drawBirds(t){
+    for(const b of birds){
+      b.x += b.spd;
+      if(b.x > W+4) b.x=-4;
+      b.flap += b.flapSpd*0.06;
+      // simple 2-pixel bird: v-shape
+      const wing = Math.sin(b.flap)>0 ? 1 : -1;
+      ctx.fillStyle='rgba(20,20,40,0.7)';
+      ctx.fillRect(Math.floor(b.x),   Math.floor(b.y),           1,1);
+      ctx.fillRect(Math.floor(b.x-1), Math.floor(b.y+wing),      1,1);
+      ctx.fillRect(Math.floor(b.x+1), Math.floor(b.y+wing),      1,1);
+    }
+  }
+
+  function drawGround(theme){
+    const P=scene;
+    const gy=Math.floor(H*0.72);
+
+    // Base ground fill — 3 layers darkening downward
+    ctx.fillStyle=P.gnd1;
+    ctx.fillRect(0, gy, W, Math.ceil((H-gy)*0.35));
+    ctx.fillStyle=P.gnd2;
+    ctx.fillRect(0, gy+Math.ceil((H-gy)*0.35), W, Math.ceil((H-gy)*0.40));
+    ctx.fillStyle=P.gnd3;
+    ctx.fillRect(0, gy+Math.ceil((H-gy)*0.75), W, Math.ceil((H-gy)*0.25));
+
+    // Horizon highlight line
+    ctx.fillStyle=P.gndLine;
+    ctx.fillRect(0, gy, W, 1);
+
+    // Water (night only)
+    if(P.water && scene._waterY){
+      ctx.fillStyle=P.water;
+      ctx.fillRect(0, scene._waterY, W, Math.ceil((H-scene._waterY)*0.55));
+      if(P.waterShine && scene._ripples){
+        ctx.fillStyle=P.waterShine;
+        for(const r of scene._ripples)
+          ctx.fillRect(r.x, r.y, r.w, 1);
+      }
+    }
+
+    // Grass tufts along horizon (pre-computed, static)
+    if(scene._grass){
+      for(const g of scene._grass){
+        ctx.fillStyle=g.c;
+        ctx.fillRect(g.x, g.y-g.h, 1, g.h);
+      }
+    }
+
+    // Flowers / dots
+    if(scene._flowers){
+      for(const f of scene._flowers){
+        ctx.fillStyle=f.c;
+        ctx.fillRect(f.x, f.y, 1, 1);
+      }
+    }
+  }
+
+  /* ── main render ── */
+  let t=0, lastTheme=null;
+
+  function draw(){
+    const theme = getTheme();
+    if(theme!==lastTheme){ initScene(); lastTheme=theme; }
+
+    ctx.clearRect(0,0,W,H);
+
+    // Sky stripes (sunset)
+    if(theme==='sunset') drawSkyStripes(t);
+
+    // Sun/Moon
+    drawSunMoon(theme, t);
+
+    // Stars (night)
+    if(scene.starColor){
+      for(const s of stars){
+        const a=s.a*(0.5+0.5*Math.sin(t*s.spd+s.off));
+        ctx.fillStyle=`rgba(255,255,255,${a})`;
+        ctx.fillRect(s.x,s.y,s.size,s.size);
+      }
+    }
+
+    // Clouds
+    for(const c of clouds){
+      c.x+=c.spd;
+      if(c.x>W+c.w) c.x=-c.w;
+      drawCloud(c, scene.cloudFill, scene.cloudShadow);
+    }
+
+    // Ground (drawn before birds so birds appear above horizon)
+    drawGround(theme);
+
+    // Birds
+    drawBirds(t);
+
+    t+=0.016;
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize',()=>{ resize(); initScene(); lastTheme=null; });
+  resize();
+  initScene();
+  draw();
+})();
 </script>
 </body>
 </html>
