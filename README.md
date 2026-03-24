@@ -89,15 +89,3 @@ Each card includes:
 - No build tools
 
 Just open `index.html` and play.
-
----
-
-## 📦 Project Structure
-
-```
-.
-├── index.html
-└── README.md
-```
-
-Everything is self-contained in a single file for simplicity and GitHub Pages deployment.
