@@ -60,7 +60,6 @@ body {
 body::before {
   content: '';
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  /* Default = day sky, overridden by JS via body class */
   background: linear-gradient(180deg, #78c8f0 0%, #a8e0f8 40%, #c8f0ff 70%, #90d878 100%);
   transition: background 2s ease;
 }
@@ -332,7 +331,6 @@ header {
 .card-camo {
   position: absolute; border-radius: var(--radius); pointer-events: none;
   opacity: 0; transition: opacity 0.18s ease;
-  /* inset négatif + padding positif pour que le blur ne déborde pas hors de la carte */
   inset: -20px; padding: 20px;
   background-color: rgba(75,95,48,0.22);
   background-image:
@@ -351,7 +349,6 @@ header {
   position: absolute; inset: 0; border-radius: var(--radius); pointer-events: none;
   opacity: 0; transition: opacity 0.18s ease;
   background: linear-gradient(to bottom, rgba(180,0,0,0.13) 50%, rgba(230,230,230,0.1) 50%);
-  /* Le cercle est géré en background pour éviter les ghost du ::after */
   background-image:
     linear-gradient(to bottom, rgba(180,0,0,0.13) 50%, rgba(230,230,230,0.1) 50%),
     radial-gradient(circle 28px at 50% 50%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.35) 60%, transparent 61%),
@@ -641,118 +638,165 @@ header {
    RESPONSIVE — MOBILE (≤ 480px)
 ════════════════════════════════════════ */
 @media (max-width: 480px) {
+  /* Allow scroll only on non-game screens */
   body { overflow-y: auto; }
-  #game { overflow: hidden; }
 
-  header { padding: 10px 12px; }
+  /* ── Header: compact but not cramped ── */
+  header {
+    padding: 8px 12px;
+    height: 52px;
+  }
 
   .btn-back-menu {
-    padding: 6px 10px;
-    font-size: 0.56rem;
-    gap: 4px;
+    padding: 5px 9px;
+    font-size: 0.55rem;
+    gap: 3px;
   }
 
-  .stats { padding: 5px 8px; gap: 8px; }
-  .stat-val, .streak-val { font-size: 0.88rem; }
-  .stat-lbl, .streak-lbl { font-size: 0.42rem; }
-  .stat-sep  { height: 16px; }
-  .streak-flame { font-size: 0.85rem; }
+  .stats { padding: 4px 8px; gap: 7px; }
+  .stat-val, .streak-val { font-size: 0.82rem; }
+  .stat-lbl, .streak-lbl { font-size: 0.40rem; }
+  .stat-sep  { height: 14px; }
+  .streak-flame { font-size: 0.8rem; }
 
+  /* ── Game screen: flex column that fills the viewport exactly ── */
   #game {
-    padding-top: 58px;
-    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
-    gap: 0;
-    justify-content: center;
     min-height: 100dvh;
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    /* Clear the 52px header */
+    padding-top: 60px;
+    padding-bottom: 0;
+    gap: 0;
   }
 
-  .card { padding: 36px 20px; }
+  /* ── Scene: grows to fill the available space between header and buttons ── */
+  .scene {
+    flex: 1 1 auto;
+    /* Never exceed available height */
+    max-height: calc(100dvh - 60px - 72px - 28px - env(safe-area-inset-bottom, 0px));
+    width: min(88vw, 310px);
+    /* Let height be driven by aspect ratio */
+    height: auto !important;
+    aspect-ratio: 4 / 5;
+    /* Constrain so aspect-ratio doesn't exceed max-height */
+    max-width: calc((100dvh - 60px - 72px - 28px - env(safe-area-inset-bottom, 0px)) * 0.8);
+  }
+
+  .card { padding: 32px 18px 28px; }
 
   .card-name {
-    font-size: clamp(1.25rem, 7vw, 2rem);
-    padding: 0 12px;
+    font-size: clamp(1.15rem, 6.5vw, 1.85rem);
+    padding: 0 10px;
   }
 
-  .card-index { top: 14px; font-size: 0.5rem; }
+  .card-index { top: 12px; font-size: 0.48rem; }
+  .card-watermark { font-size: 6.5rem; bottom: -6px; right: 5px; }
 
-  .card-watermark { font-size: 7rem; bottom: -8px; right: 6px; }
+  .stamp-mil  { top: 34px; left: 10px;  font-size: 0.52rem; padding: 4px 8px; }
+  .stamp-poke { top: 34px; right: 10px; font-size: 0.52rem; padding: 4px 8px; }
 
-  .stamp-mil  { top: 38px; left: 12px;  font-size: 0.55rem; padding: 5px 9px; }
-  .stamp-poke { top: 38px; right: 12px; font-size: 0.55rem; padding: 5px 9px; }
+  .swipe-hint-left  { left: 7px; }
+  .swipe-hint-right { right: 7px; }
+  .swipe-arrow { font-size: 0.46rem; padding: 4px 3px; }
 
-  .swipe-hint-left  { left: 8px; }
-  .swipe-hint-right { right: 8px; }
-  .swipe-arrow { font-size: 0.5rem; padding: 5px 4px; }
-
+  /* ── Actions: fixed-height row, does NOT grow ── */
   .actions {
-    margin-top: 12px; gap: 8px;
-    padding-bottom: env(safe-area-inset-bottom, 8px);
+    flex: 0 0 auto;
+    margin-top: 10px;
+    gap: 8px;
+    width: min(88vw, 310px);
+    padding-bottom: 0;
   }
 
   .btn {
-    height: 60px;
-    font-size: 0.68rem;
+    height: 56px;
+    font-size: 0.64rem;
     letter-spacing: 0.06em;
     padding: 0;
     border-radius: 10px;
     flex: 1;
   }
 
-  .mil-top { font-size: 1rem; }
-  .mil-bot { font-size: 0.6rem; letter-spacing: 0.12em; }
-  .mil-band { height: 6px; }
+  .mil-top { font-size: 0.95rem; }
+  .mil-bot { font-size: 0.56rem; letter-spacing: 0.10em; }
+  .mil-band { height: 5px; }
 
-  .pb-half-top, .pb-half-bot { font-size: 0.62rem; letter-spacing: 0.08em; }
-  .pb-band   { height: 6px; }
-  .pb-band::before { width: 10px; height: 10px; }
+  .pb-half-top, .pb-half-bot { font-size: 0.6rem; letter-spacing: 0.07em; }
+  .pb-band   { height: 5px; }
+  .pb-band::before { width: 9px; height: 9px; }
 
-  .hint { font-size: 0.48rem; letter-spacing: 0.08em; }
-
-  #menu { gap: 28px; }
-  .menu-header h1 { font-size: 1.9rem; }
-  .menu-tagline   { font-size: 0.55rem; }
-
-  .mode-card {
-    padding: 16px 16px;
-    gap: 12px;
-    border-radius: 16px;
+  /* ── Hint: slim footer, clears safe area ── */
+  .hint {
+    flex: 0 0 auto;
+    font-size: 0.44rem;
+    letter-spacing: 0.07em;
+    margin-top: 6px;
+    margin-bottom: 0;
+    padding-bottom: max(env(safe-area-inset-bottom, 6px), 6px);
   }
 
-  .mode-icon { width: 42px; height: 42px; font-size: 1.35rem; border-radius: 3px; }
-  .mode-name { font-size: 0.92rem; }
-  .mode-desc { font-size: 0.55rem; }
-  .mode-badge { font-size: 0.46rem; padding: 3px 8px; }
+  /* ── Reveal: position:fixed so it NEVER affects layout ── */
+  /* Raised above theme-toggle (≈36px) + safe area */
+  .reveal {
+    bottom: max(calc(env(safe-area-inset-bottom, 0px) + 44px), 48px);
+    width: min(90vw, 300px);
+    padding: 11px 14px 13px;
+  }
+  .reveal-name { font-size: 0.9rem; }
+  .reveal-desc { font-size: 0.52rem; }
 
-  .reveal { bottom: 68px; padding: 12px 16px 14px; }
-  .reveal-name { font-size: 0.95rem; }
-  .reveal-desc { font-size: 0.55rem; }
+  /* ── Menu ── */
+  #menu { gap: 26px; }
+  .menu-header h1 { font-size: 1.85rem; }
+  .menu-tagline   { font-size: 0.52rem; }
 
-  #result { padding: 72px 16px 100px; gap: 16px; }
-  .result-score { font-size: clamp(2.4rem, 14vw, 5rem); }
-  .result-sub   { font-size: 0.7rem; max-width: 88vw; }
-  .rg-val { font-size: 1.6rem; }
-  .rg-lbl { font-size: 0.48rem; }
+  .mode-card {
+    padding: 14px 14px;
+    gap: 11px;
+    border-radius: 14px;
+  }
+  .mode-icon { width: 40px; height: 40px; font-size: 1.25rem; border-radius: 3px; }
+  .mode-name { font-size: 0.88rem; }
+  .mode-desc { font-size: 0.53rem; }
+  .mode-badge { font-size: 0.44rem; padding: 3px 7px; }
+
+  /* ── Result ── */
+  #result { padding: 68px 16px 90px; gap: 14px; }
+  .result-score { font-size: clamp(2.2rem, 13vw, 4.5rem); }
+  .result-sub   { font-size: 0.68rem; max-width: 88vw; }
+  .rg-val { font-size: 1.5rem; }
+  .rg-lbl { font-size: 0.46rem; }
 
   .result-btns {
     flex-direction: column;
     width: min(88vw, 300px);
     gap: 8px;
   }
-
   .btn-replay, .btn-menu {
     width: 100%;
-    height: 48px;
+    height: 46px;
     justify-content: center;
   }
 
-  #theme-toggle { bottom: calc(8px + env(safe-area-inset-bottom, 0px)); padding: 2px; gap: 1px; }
-  .tt-btn { padding: 3px 7px; font-size: 0.46rem; }
+  /* ── Theme toggle ── */
+  #theme-toggle {
+    bottom: max(env(safe-area-inset-bottom, 6px), 6px);
+    padding: 2px;
+    gap: 1px;
+  }
+  .tt-btn { padding: 3px 6px; font-size: 0.44rem; }
 
+  /* ── GitHub link ── */
   #gh-link {
-    bottom: 14px !important;
-    right: 10px !important;
-    font-size: 0.5rem !important;
-    gap: 5px !important;
+    bottom: 12px !important;
+    right: 8px !important;
+    font-size: 0.48rem !important;
+    gap: 4px !important;
   }
 }
 
@@ -760,17 +804,19 @@ header {
    RESPONSIVE — VERY SMALL (≤ 360px)
 ════════════════════════════════════════ */
 @media (max-width: 360px) {
-  .card-name { font-size: clamp(1.1rem, 6.5vw, 1.5rem); }
-  .stats { gap: 5px; padding: 4px 6px; }
-  .stat-val, .streak-val { font-size: 0.78rem; }
-  .btn { height: 54px; font-size: 0.65rem; }
-  .menu-header h1 { font-size: 1.65rem; }
+  .scene {
+    width: min(94vw, 290px);
+    max-width: calc((100dvh - 60px - 64px - 28px) * 0.8);
+  }
+  .card-name { font-size: clamp(1rem, 6vw, 1.4rem); }
+  .stats { gap: 4px; padding: 3px 5px; }
+  .stat-val, .streak-val { font-size: 0.72rem; }
+  .btn { height: 50px; font-size: 0.58rem; }
+  .menu-header h1 { font-size: 1.55rem; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
    PIXEL ART SOLDIERS — Decorative background
-   Cycle 4s : marche → accroupi → tir (×2 avec balle) → relevé → marche
-   z-index 1 — purement décoratif, pointer-events: none
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 #soldiers-layer {
@@ -868,7 +914,6 @@ header {
 }
 
 /* ── Soldier instances ── */
-/* 1 — droite, devant */
 .px-soldier-1 { bottom: 22%; opacity: 0.88;
   animation: soldier-march-r 28s linear infinite; animation-delay: 0s; }
 .px-soldier-1 .px-sprite {
@@ -876,7 +921,6 @@ header {
 .px-soldier-1 .px-bullet {
   animation: bullet-fly-r 4s linear infinite; animation-delay: 0s; }
 
-/* 2 — droite, décalé */
 .px-soldier-2 { bottom: 23%; opacity: 0.75;
   animation: soldier-march-r 36s linear infinite; animation-delay: -8s; }
 .px-soldier-2 .px-sprite {
@@ -884,7 +928,6 @@ header {
 .px-soldier-2 .px-bullet {
   animation: bullet-fly-r 4s linear infinite; animation-delay: -1.5s; }
 
-/* 3 — gauche (ennemi/patrouille) */
 .px-soldier-3 { bottom: 20%; opacity: 0.70;
   animation: soldier-march-l 32s linear infinite; animation-delay: -14s; }
 .px-soldier-3 .px-sprite {
@@ -893,7 +936,6 @@ header {
   left: -24px;
   animation: bullet-fly-l 4s linear infinite; animation-delay: -0.5s; }
 
-/* 4 — droite, fond */
 .px-soldier-4 { bottom: 24.5%; opacity: 0.60;
   animation: soldier-march-r 42s linear infinite; animation-delay: -22s; }
 .px-soldier-4 .px-sprite {
@@ -901,7 +943,6 @@ header {
 .px-soldier-4 .px-bullet {
   animation: bullet-fly-r 4s linear infinite; animation-delay: -3s; }
 
-/* 5 — gauche, lointain */
 .px-soldier-5 { bottom: 21%; opacity: 0.50;
   animation: soldier-march-l 45s linear infinite; animation-delay: -5s; }
 .px-soldier-5 .px-sprite {
@@ -910,6 +951,6 @@ header {
   left: -24px;
   animation: bullet-fly-l 4s linear infinite; animation-delay: -2s; }
 
-/* ── Adaptations thèmes ── */
+/* ── Theme adaptations ── */
 body.theme-night  .px-soldier { filter: brightness(1.5); }
 body.theme-sunset .px-soldier { filter: sepia(0.25) brightness(0.95); }
