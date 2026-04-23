@@ -35,6 +35,10 @@ function shuffle(a){
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   $(id).classList.add('active');
+  // PATCH v1 — gestion scroll body selon l'écran actif
+  const scrollableScreens = ['menu', 'result'];
+  document.body.classList.toggle('scrollable', scrollableScreens.includes(id));
+  if (scrollableScreens.includes(id)) window.scrollTo(0, 0);
 }
 
 function goMenu(){

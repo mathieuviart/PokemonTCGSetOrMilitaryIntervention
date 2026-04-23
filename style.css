@@ -638,8 +638,7 @@ header {
    RESPONSIVE — MOBILE (≤ 480px)
 ════════════════════════════════════════ */
 @media (max-width: 480px) {
-  /* Allow scroll only on non-game screens */
-  body { overflow-y: auto; }
+  /* PATCH v1: scroll géré via body.scrollable (JS) — voir fin du fichier */
 
   /* ── Header: compact but not cramped ── */
   header {
@@ -954,3 +953,160 @@ header {
 /* ── Theme adaptations ── */
 body.theme-night  .px-soldier { filter: brightness(1.5); }
 body.theme-sunset .px-soldier { filter: sepia(0.25) brightness(0.95); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PATCH v1 — Mobile Display Fixes  |  2026-04
+   Corrections: scroll cassé, safe-area, theme-toggle overlap, landscape
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── body.scrollable: activé par JS sur les écrans menu/result ──
+   Déverrouille le scroll tout en gardant overflow:hidden pour le jeu. */
+body.scrollable {
+  overflow-y: auto;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Quand body peut scroller : les screens partent du haut (évite le
+   centrage flex qui rend la partie haute inaccessible au scroll). */
+body.scrollable .screen.active {
+  min-height: 100dvh;
+  justify-content: flex-start;
+  padding-top: max(env(safe-area-inset-top, 28px), 28px);
+  padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 60px), 60px);
+}
+
+/* Menu : rester centré mais dégager le theme toggle en bas */
+body.scrollable #menu.active {
+  justify-content: center;
+  padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 56px), 56px);
+}
+
+/* Result : dégager le theme toggle (z-index 200) */
+#result {
+  padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 64px), 64px);
+}
+
+/* ─────────────────────────────────────────────────────────
+   TABLET ≤ 768px
+   ───────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  #menu   { padding-bottom: 60px; }
+  #result { padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 60px), 60px); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   MOBILE ≤ 480px
+   ───────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Base : body verrouillé (jeu), déverrouillé via .scrollable (JS) */
+  body           { overflow-y: hidden; }
+  body.scrollable { overflow-y: auto; }
+
+  /* Menu : centré verticalement + clearance bas pour le toggle */
+  #menu.active {
+    padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 56px), 56px);
+    justify-content: center;
+  }
+
+  /* Result : scroll naturel du contenu */
+  #result {
+    padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 70px), 70px);
+    overflow-y: visible;
+  }
+
+  /* Hint : dégager barre home iPhone + theme toggle */
+  .hint {
+    padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 46px), 46px);
+  }
+
+  /* Actions : safe-area bottom */
+  .actions {
+    padding-bottom: max(env(safe-area-inset-bottom, 4px), 4px);
+  }
+
+  /* Scene : ne jamais s'effondrer en hauteur */
+  .scene { min-height: 140px; }
+
+  /* Header right : évite le débordement horizontal */
+  .header-right { gap: 10px; }
+  .stats { max-width: calc(100vw - 110px); }
+
+  /* Game over overlay : taille responsive */
+  .go-title { font-size: clamp(1.6rem, 8vw, 2.2rem); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   TRÈS PETIT ≤ 360px
+   ───────────────────────────────────────────────────────── */
+@media (max-width: 360px) {
+  /* Libère de l'espace dans la stats bar */
+  .streak-lbl { display: none; }
+
+  #menu.active {
+    padding-bottom: max(calc(env(safe-area-inset-bottom, 0px) + 60px), 60px);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   LANDSCAPE MOBILE (hauteur ≤ 500px)
+   ───────────────────────────────────────────────────────── */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Layout horizontal : carte à gauche, boutons à droite */
+  #game {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    padding-top: 50px;
+    padding-bottom: 0;
+    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .scene {
+    flex: 0 0 auto;
+    width: min(42vh, 200px);
+    height: auto;
+    aspect-ratio: 4 / 5;
+    max-height: calc(100dvh - 50px - 16px);
+    max-width: none;
+  }
+
+  /* Boutons empilés verticalement à droite de la carte */
+  .actions {
+    flex-direction: column;
+    width: 108px;
+    margin-top: 0;
+    gap: 6px;
+    align-self: center;
+    padding-bottom: 0;
+  }
+
+  .btn {
+    height: auto;
+    min-height: 44px;
+    width: 100%;
+    font-size: 0.58rem;
+  }
+
+  /* Hint masquée en paysage — pas de place */
+  .hint { display: none; }
+
+  /* Header compact */
+  header { padding: 6px 12px; height: 44px; }
+  .stat-val, .streak-val { font-size: 0.72rem; }
+  .stat-lbl, .streak-lbl { font-size: 0.36rem; }
+
+  /* Theme toggle : colle au bas en respectant la safe-area */
+  #theme-toggle {
+    bottom: max(env(safe-area-inset-bottom, 4px), 4px);
+  }
+
+  /* Reveal : remonter pour ne pas être masquée par le toggle */
+  .reveal {
+    bottom: max(calc(env(safe-area-inset-bottom, 0px) + 40px), 44px);
+    width: min(60vw, 280px);
+  }
+}
